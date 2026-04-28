@@ -519,93 +519,6 @@
             letter-spacing: 0.04em;
         }
 
-        /* ── Pricing Modal ── */
-        .pricing-modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            z-index: 200;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            pointer-events: all;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.35s ease, visibility 0.35s ease;
-        }
-
-        .pricing-modal-overlay.active {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        .pricing-modal {
-            background: #111111;
-            border: 1px solid rgba(255, 180, 50, 0.35);
-            border-radius: 28px;
-            padding: 2.5rem 2rem;
-            text-align: center;
-            max-width: 440px;
-            width: 90%;
-            box-shadow: 0 0 60px rgba(255, 160, 30, 0.3), 0 0 120px rgba(255, 140, 20, 0.15), 0 20px 60px rgba(0, 0, 0, 0.7);
-            position: relative;
-            animation: modalIn 0.4s ease-out;
-        }
-
-        @keyframes modalIn {
-            from {
-                transform: translateY(30px) scale(0.94);
-                opacity: 0;
-            }
-            to {
-                transform: translateY(0) scale(1);
-                opacity: 1;
-            }
-        }
-
-        .modal-close {
-            position: absolute;
-            top: 1rem;
-            right: 1.3rem;
-            background: none;
-            border: none;
-            color: rgba(255, 255, 255, 0.5);
-            font-size: 1.6rem;
-            cursor: pointer;
-            transition: color 0.3s;
-            line-height: 1;
-        }
-        .modal-close:hover {
-            color: #ffc340;
-            text-shadow: 0 0 10px rgba(255, 170, 40, 0.6);
-        }
-
-        .modal-price {
-            font-family: 'Orbitron', sans-serif;
-            font-weight: 800;
-            font-size: 5rem;
-            color: #ffc340;
-            text-shadow: 0 0 20px rgba(255, 170, 40, 0.7), 0 0 50px rgba(255, 140, 20, 0.35);
-            line-height: 1;
-        }
-
-        .modal-currency {
-            font-size: 1.5rem;
-            vertical-align: super;
-            font-weight: 600;
-            margin-right: -4px;
-        }
-
-        .modal-detail {
-            color: rgba(255, 255, 255, 0.55);
-            font-size: 0.9rem;
-            letter-spacing: 0.06em;
-            margin-top: 0.6rem;
-        }
-
         .modal-btn {
             display: inline-block;
             margin-top: 1.8rem;
@@ -734,8 +647,8 @@
         <ul class="nav-links">
             <li><a href="#home">Home</a></li>
             <li><a href="#features">Features</a></li>
-            <li><a href="#about">About</a></li>
-            <li><a class="nav-pricing-btn" id="navPricingBtn" role="button">Pricing</a></li>
+            <li><a href="#download">Download</a></li>
+            <li><a class="nav-pricing-btn" href="https://github.com/goldodemon/REPO-for-windsurf-don-t-mind-this-/releases/latest" target="_blank" role="button">Download Now</a></li>
         </ul>
     </nav>
 
@@ -754,7 +667,7 @@
     <!-- Features -->
     <section class="features-section" id="features">
         <p class="section-label">Modules</p>
-        <h2 class="section-title">Feat ure s</h2>
+        <h2 class="section-title">Features</h2>
         <div class="features-grid">
 
             <!-- Sword Card -->
@@ -764,116 +677,130 @@
                 <ul>
                     <li>Trigger Bot</li>
                     <li>AimAssist</li>
-                    <li>Jump-Reset</li>
+                    <li>Auto Jump Reset</li>
                     <li>W-Tap</li>
                     <li>S-Tap</li>
-                    <li>Knockback Displacement</li>
-                    <li>Shield-Breaker</li>
-                    <li>Backtrack</li>
-                    <li>Auto Sprint</li>
+                    <li>Combo Optimizer</li>
+                    <li>Shield Disabler</li>
+                    <li>CPS Randomizer</li>
+                    <li>Hit Select</li>
+                    <li>Target Strafe</li>
+                    <li>Auto Drain</li>
+                    <li>Auto Pot</li>
+                    <li>Lava Key</li>
+                    <li>Cob Key</li>
                 </ul>
             </div>
 
-            <!-- Crystal Card (includes Air-Place) -->
+            <!-- Crystal Card -->
             <div class="feature-card">
                 <span class="feature-card-icon">💎</span>
                 <h3>Crystal</h3>
                 <ul>
                     <li>Double Anchor</li>
                     <li>Single Anchor</li>
-                    <li>Safe Anchor</li>
-                    <li>Hit-Crystal</li>
+                    <li>Air Anchor</li>
                     <li>Auto Crystal</li>
-                    <li>Air-Place</li>
                     <li>Hover Totem</li>
-                    <li>Auto Totem</li>
                     <li>D-HandMod</li>
-                    <li>Pearl-Keybind</li>
+                    <li>Auto Double Hand</li>
+                    <li>Pearl Keybind</li>
                     <li>Fast XP</li>
+                    <li>Totem Offhand</li>
+                    <li>Auto Inventory Totem</li>
                 </ul>
             </div>
 
-            <!-- Mace Card (updated) -->
+            <!-- Mace Card -->
             <div class="feature-card">
                 <span class="feature-card-icon">🔨</span>
                 <h3>Mace</h3>
                 <ul>
-                    <li>Auto Spear Swap</li>
-                    <li>Auto Mace</li>
+                    <li>Spear Swap</li>
+                    <li>Mace Swap</li>
                     <li>Breach Swap</li>
-                    <li>Auto Pearl Catch</li>
-                    <li>Auto Pearl Grab</li>
+                    <li>Pearl Catch</li>
                     <li>Dive Bomber</li>
                     <li>Firework Macro</li>
                     <li>Key Wind Charge</li>
+                    <li>Key Elytra</li>
                 </ul>
             </div>
 
-            <!-- Extra Card -->
+            <!-- Blatant Card -->
             <div class="feature-card">
-                <span class="feature-card-icon">🌀</span>
-                <h3>Extra</h3>
+                <span class="feature-card-icon">💀</span>
+                <h3>Blatant</h3>
                 <ul>
-                    <li>Stun Web</li>
-                    <li>Head Web</li>
-                    <li>Auto Water</li>
+                    <li>Velocity</li>
+                    <li>Reach</li>
+                    <li>Auto Totem</li>
                 </ul>
             </div>
 
-            <!-- Optimizers Card (updated) -->
+            <!-- Render Card -->
+            <div class="feature-card">
+                <span class="feature-card-icon">🎨</span>
+                <h3>Render</h3>
+                <ul>
+                    <li>HUD</li>
+                    <li>Target HUD</li>
+                    <li>Fullbright</li>
+                    <li>Super Vision</li>
+                    <li>Storage ESP</li>
+                    <li>Render Barrier</li>
+                    <li>Swing Speed</li>
+                    <li>No Bounce</li>
+                </ul>
+            </div>
+
+            <!-- Optimizers Card -->
             <div class="feature-card">
                 <span class="feature-card-icon">⚡</span>
                 <h3>Optimizers</h3>
                 <ul>
-                    <li>Crystal-Optimizer</li>
-                    <li>Anchor-Optimizer</li>
-                    <li>Anti-Misclick-Optimizer</li>
-                    <li>No Jump Delay</li>
+                    <li>Crystal Optimizer</li>
+                    <li>Anchor Optimizer</li>
+                    <li>Misclick Optimizer</li>
                     <li>Hit Optimizer</li>
                     <li>Placement Optimizer</li>
-                    <li>Break Optimizer</li>
+                    <li>Jump Optimizer</li>
+                    <li>Shield Optimizer</li>
+                    <li>Camera Optimizer</li>
+                    <li>No Miss Delay</li>
+                    <li>No Break Delay</li>
+                    <li>Sprint</li>
+                    <li>Auto Tool</li>
+                    <li>Auto Pickaxe</li>
+                    <li>Pack Spoof</li>
                 </ul>
             </div>
 
         </div>
     </section>
 
-    <!-- About / Pricing anchor -->
-    <section class="pricing-section" id="about">
-        <p class="section-label">One-Time Purchase</p>
-        <div class="pricing-card">
-            <div class="price-amount">$5</div>
-            <div class="price-label">Lifetime Access</div>
-            <div class="price-note">No subscriptions. No hidden fees.<br>All modules included. Instant digital delivery.</div>
+    <!-- Download Section -->
+    <section class="pricing-section" id="download">
+        <p class="section-label">Get Started</p>
+        <div class="pricing-card" style="cursor:default;">
+            <div class="price-amount" style="font-size:2.5rem;">Download</div>
+            <div class="price-label">Fabric 1.21.11</div>
+            <div class="price-note" style="margin-top:1rem;">Requires Fabric Loader for Minecraft 1.21.11<br>Drop the .jar into your mods folder and press Right Shift in-game.</div>
+            <a href="https://github.com/goldodemon/REPO-for-windsurf-don-t-mind-this-/releases/latest" target="_blank" class="modal-btn" style="display:inline-block;margin-top:1.5rem;">Download Latest Release</a>
         </div>
     </section>
-
-    <!-- Pricing Modal -->
-    <div class="pricing-modal-overlay" id="pricingModalOverlay">
-        <div class="pricing-modal">
-            <button class="modal-close" id="modalCloseBtn">&times;</button>
-            <span class="modal-currency" style="font-family:'Orbitron',sans-serif;color:#ffc340;font-weight:600;font-size:1.3rem;">$</span>
-            <span class="modal-price">5</span>
-            <div class="modal-detail">One-time payment &mdash; lifetime access</div>
-            <div class="modal-detail" style="font-size:0.75rem;margin-top:0.3rem;opacity:0.6;">Instant digital delivery after purchase</div>
-            <!-- 🔗 Purchase link goes to your Sell.app product page -->
-            <a href="https://goldoclient.sell.app/product/goldoclient-dev" target="_blank" class="modal-btn">Purchase Now</a>
-        </div>
-    </div>
 
     <!-- Footer -->
     <footer>
         <p>&copy; 2026 Goldo Client. All rights reserved.</p>
-        <p class="footer-credit">Crafted with guidance from DeepSeek AI</p>
+        <p class="footer-credit">Goldo Client</p>
     </footer>
 
     <script>
         (function() {
             const glowOverlay = document.getElementById('glowOverlay');
             const particlesContainer = document.getElementById('particlesContainer');
-            const pricingModalOverlay = document.getElementById('pricingModalOverlay');
-            const navPricingBtn = document.getElementById('navPricingBtn');
-            const modalCloseBtn = document.getElementById('modalCloseBtn');
+
 
             let targetX = window.innerWidth / 2;
             let targetY = window.innerHeight / 2;
@@ -983,41 +910,7 @@
                 particlesContainer.appendChild(fragment);
             }
 
-            // ── Pricing Modal ──
-            function openModal() {
-                pricingModalOverlay.classList.add('active');
-                document.body.style.overflow = 'hidden';
-            }
 
-            function closeModal() {
-                pricingModalOverlay.classList.remove('active');
-                document.body.style.overflow = '';
-            }
-
-            navPricingBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                openModal();
-            });
-
-            modalCloseBtn.addEventListener('click', closeModal);
-
-            pricingModalOverlay.addEventListener('click', (e) => {
-                if (e.target === pricingModalOverlay) {
-                    closeModal();
-                }
-            });
-
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape' && pricingModalOverlay.classList.contains('active')) {
-                    closeModal();
-                }
-            });
-
-            const pricingCard = document.querySelector('.pricing-card');
-            if (pricingCard) {
-                pricingCard.style.cursor = 'pointer';
-                pricingCard.addEventListener('click', openModal);
-            }
 
             // ── Init ──
             function init() {
