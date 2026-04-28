@@ -5,6 +5,7 @@ import dlindustries.vigillant.system.gui.render.GlassRenderer;
 import dlindustries.vigillant.system.module.Category;
 import dlindustries.vigillant.system.module.Module;
 import dlindustries.vigillant.system.module.modules.client.ClickGUI;
+import dlindustries.vigillant.system.module.setting.*;
 import dlindustries.vigillant.system.utils.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
@@ -12,7 +13,7 @@ import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.input.KeyInput;
 import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
+import org.lwjgl.glfw.GLFW;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -34,6 +35,7 @@ public final class ClickGui extends Screen {
 	private static final int MODULE_PADDING = 3;
 	private static final int CORNER_RADIUS = 12;
 	private static final int SCROLL_SPEED = 20;
+	private static final int SETTING_ROW_HEIGHT = 22;
 
 	private static final Color GOLD = new Color(255, 215, 0);
 	private static final Color TEXT_WHITE = new Color(230, 230, 230);
@@ -52,6 +54,7 @@ public final class ClickGui extends Screen {
 	private float[] moduleHoverProgress;
 	private long lastRenderTime;
 	private TextFieldWidget searchField;
+	private Module expandedModule;
 
 	public Color currentColor;
 	public List<Window> windows = new ArrayList<>();
@@ -133,6 +136,7 @@ public final class ClickGui extends Screen {
 		}
 		moduleHoverProgress = new float[moduleEntries.size()];
 		scrollOffset = 0;
+		expandedModule = null;
 	}
 
 	@Override
@@ -183,11 +187,28 @@ public final class ClickGui extends Screen {
 
 		context.getMatrices().popMatrix();
 
-		if (searchField != null) {
-			searchField.setX(guiX + SIDEBAR_WIDTH + 10);
-			searchField.setY(guiY + 8);
-			searchField.render(context, mouseX, mouseY, 0);
-		}
+		renderSearchBar(context, mouseX, mouseY, scaleFactor);
+	}
+
+	private void renderSearchBar(DrawContext context, int mouseX, int mouseY, float scale) {
+		if (searchField == null) return;
+
+		int sbX = guiX + SIDEBAR_WIDTH + 5;
+		int sbY = guiY + 4;
+		int sbW = GUI_WIDTH - SIDEBAR_WIDTH - 10;
+		int sbH = 20;
+
+		GlassRenderer.renderRoundedRect(context, (int)(sbX * scale), (int)(sbY * scale),
+				(int)(sbW * scale), (int)(sbH * scale),
+				new Color(255, 255, 255, 10), (int)(6 * scale));
+		GlassRenderer.renderRoundedBorder(context, (int)(sbX * scale), (int)(sbY * scale),
+				(int)(sbW * scale), (int)(sbH * scale),
+				new Color(255, 255, 255, 15), (int)(6 * scale), 0.5);
+
+		searchField.setX(sbX + 5);
+		searchField.setY(sbY + 3);
+		searchField.setWidth(sbW - 10);
+		searchField.render(context, mouseX, mouseY, 0);
 	}
 
 	private void renderSidebar(DrawContext context, int x, int y, int w, int h, int mouseX, int mouseY, float dt, float scale) {
@@ -196,18 +217,31 @@ public final class ClickGui extends Screen {
 
 		int headerH = (int) (HEADER_HEIGHT * scale);
 
-		int logoSize = (int) (20 * scale);
-		int logoX = x + (int) (14 * scale);
-		int logoY = y + (headerH - logoSize) / 2;
-		context.fill(logoX, logoY, logoX + logoSize, logoY + logoSize, new Color(180, 160, 100, 120).getRGB());
+		String logoText = "SC";
+		int logoTextW = mc.textRenderer.getWidth(logoText);
+		float logoScale = 2.2f;
+		int logoTotalW = (int) (logoTextW * logoScale);
+		int logoTotalH = (int) (mc.textRenderer.fontHeight * logoScale);
+		int logoX = x + (int) (10 * scale);
+		int logoY = y + (headerH - logoTotalH) / 2;
+
+		GlassRenderer.renderRoundedRect(context, logoX - (int)(2 * scale), logoY - (int)(2 * scale),
+				logoTotalW + (int)(4 * scale), logoTotalH + (int)(4 * scale),
+				new Color(GOLD.getRed(), GOLD.getGreen(), GOLD.getBlue(), 20), (int)(4 * scale));
+
+		var matrices = context.getMatrices();
+		matrices.pushMatrix();
+		matrices.translate(logoX, logoY);
+		matrices.scale(logoScale, logoScale);
+		context.drawText(mc.textRenderer, logoText, 0, 0, GOLD.getRGB(), false);
+		matrices.popMatrix();
 
 		String title = "SYSTEM CLIENT";
 		int titleTextW = mc.textRenderer.getWidth(title);
-		int availableW = w - (int) (14 * scale) - logoSize - (int) (8 * scale) - (int) (6 * scale);
-		float textScale = Math.min(1.2f, (float) availableW / titleTextW);
-		int titleX = logoX + logoSize + (int) (8 * scale);
+		int availableW = w - (int) (10 * scale) - logoTotalW - (int) (12 * scale) - (int) (6 * scale);
+		float textScale = Math.min(1.0f, (float) availableW / titleTextW);
+		int titleX = logoX + logoTotalW + (int) (8 * scale);
 		int titleY = y + (headerH / 2) - (int) (mc.textRenderer.fontHeight * textScale / 2);
-		var matrices = context.getMatrices();
 		matrices.pushMatrix();
 		matrices.translate(titleX, titleY);
 		matrices.scale(textScale, textScale);
@@ -278,8 +312,22 @@ public final class ClickGui extends Screen {
 		int moduleBtnH = (int) (MODULE_BUTTON_HEIGHT * scale);
 		int modulePad = (int) (MODULE_PADDING * scale);
 		int moduleMarginX = (int) (10 * scale);
+		int settingRowH = (int) (SETTING_ROW_HEIGHT * scale);
 
-		int totalContentHeight = visibleModules.size() * (moduleBtnH + modulePad);
+		int totalContentHeight = 0;
+		for (ModuleEntry entry : visibleModules) {
+			totalContentHeight += moduleBtnH + modulePad;
+			if (entry.module == expandedModule) {
+				List<Setting<?>> settings = entry.module.getSettings();
+				int visibleSettings = 0;
+				for (Setting<?> s : settings) {
+					if (!(s instanceof KeybindSetting && ((KeybindSetting) s).isModuleKey())) {
+						visibleSettings++;
+					}
+				}
+				totalContentHeight += visibleSettings * settingRowH + (int) (4 * scale);
+			}
+		}
 		maxScroll = Math.max(0, totalContentHeight - contentH + (int) (10 * scale));
 		int pScrollOffset = (int) (scrollOffset * scale);
 
@@ -288,62 +336,150 @@ public final class ClickGui extends Screen {
 				(int) ((x + w) / scale), (int) ((contentY + contentH) / scale)
 		);
 
+		int currentY = contentY + (int) (8 * scale) - pScrollOffset;
+
 		for (int i = 0; i < visibleModules.size(); i++) {
 			ModuleEntry entry = visibleModules.get(i);
 			int btnX = x + moduleMarginX;
-			int btnY = contentY + (int) (8 * scale) + i * (moduleBtnH + modulePad) - pScrollOffset;
+			int btnY = currentY;
 			int btnW = w - moduleMarginX * 2;
 
-			if (btnY + moduleBtnH < contentY || btnY > contentY + contentH) continue;
+			boolean visible = btnY + moduleBtnH >= contentY && btnY <= contentY + contentH;
 
-			boolean hovered = mouseX >= btnX && mouseX <= btnX + btnW
-					&& mouseY >= btnY && mouseY <= btnY + moduleBtnH
-					&& mouseY >= contentY && mouseY <= contentY + contentH;
+			if (visible) {
+				boolean hovered = mouseX >= btnX && mouseX <= btnX + btnW
+						&& mouseY >= btnY && mouseY <= btnY + moduleBtnH
+						&& mouseY >= contentY && mouseY <= contentY + contentH;
 
-			int entryIndex = moduleEntries.indexOf(entry);
-			if (entryIndex >= 0 && entryIndex < moduleHoverProgress.length) {
-				float targetHover = hovered ? 1.0f : 0.0f;
-				moduleHoverProgress[entryIndex] += (targetHover - moduleHoverProgress[entryIndex]) * Math.min(1.0f, dt * 10.0f);
+				int entryIndex = moduleEntries.indexOf(entry);
+				if (entryIndex >= 0 && entryIndex < moduleHoverProgress.length) {
+					float targetHover = hovered ? 1.0f : 0.0f;
+					moduleHoverProgress[entryIndex] += (targetHover - moduleHoverProgress[entryIndex]) * Math.min(1.0f, dt * 10.0f);
+				}
+
+				float hoverProg = (entryIndex >= 0 && entryIndex < moduleHoverProgress.length) ? moduleHoverProgress[entryIndex] : 0;
+
+				Color btnBg;
+				if (entry.module.isEnabled()) {
+					btnBg = new Color(GOLD.getRed(), GOLD.getGreen(), GOLD.getBlue(), 35);
+				} else {
+					btnBg = new Color(255, 255, 255, 8);
+				}
+
+				float renderScale = 1.0f + 0.02f * hoverProg;
+				int scaledBtnW = (int) (btnW * renderScale);
+				int scaledBtnH = (int) (moduleBtnH * renderScale);
+				int offsetX = (btnW - scaledBtnW) / 2;
+				int offsetY = (moduleBtnH - scaledBtnH) / 2;
+
+				GlassRenderer.renderRoundedRect(context, btnX + offsetX, btnY + offsetY, scaledBtnW, scaledBtnH,
+						btnBg, (int) (6 * scale));
+
+				if (hoverProg > 0.01f) {
+					GlassRenderer.renderHoverOverlay(context, btnX + offsetX, btnY + offsetY, scaledBtnW, scaledBtnH, hoverProg);
+				}
+
+				if (entry.module.isEnabled()) {
+					context.fill(btnX + offsetX, btnY + offsetY, btnX + offsetX + (int) (3 * scale), btnY + offsetY + scaledBtnH,
+							GlassRenderer.getGoldWithAlpha(180).getRGB());
+				}
+
+				String moduleName = entry.module.getName().toString();
+				int textY = btnY + (moduleBtnH - mc.textRenderer.fontHeight * 2) / 2;
+				int textColor = entry.module.isEnabled() ? GOLD.getRGB() : TEXT_WHITE.getRGB();
+				TextRenderer.drawString(moduleName, context, btnX + (int) (14 * scale), textY, textColor);
+
+				String keybindText = getKeybindText(entry.module);
+				if (keybindText != null) {
+					int kbW = mc.textRenderer.getWidth(keybindText) * 2;
+					int kbX = btnX + btnW - kbW - (int) (10 * scale);
+					TextRenderer.drawString(keybindText, context, kbX, textY, TEXT_DIM.getRGB());
+				}
+
+				if (entry.module == expandedModule) {
+					context.fill(btnX + offsetX + scaledBtnW - (int)(3 * scale), btnY + offsetY,
+							btnX + offsetX + scaledBtnW, btnY + offsetY + scaledBtnH,
+							GlassRenderer.getGoldWithAlpha(100).getRGB());
+				}
+
+				if (hovered && entry.module.getDescription() != null) {
+					renderModuleTooltip(context, mouseX, mouseY, entry.module.getDescription().toString(), scale);
+				}
 			}
 
-			float hoverProg = (entryIndex >= 0 && entryIndex < moduleHoverProgress.length) ? moduleHoverProgress[entryIndex] : 0;
+			currentY += moduleBtnH + modulePad;
 
-			Color btnBg;
-			if (entry.module.isEnabled()) {
-				btnBg = new Color(GOLD.getRed(), GOLD.getGreen(), GOLD.getBlue(), 35);
-			} else {
-				btnBg = new Color(255, 255, 255, 8);
-			}
-
-			float renderScale = 1.0f + 0.02f * hoverProg;
-			int scaledBtnW = (int) (btnW * renderScale);
-			int scaledBtnH = (int) (moduleBtnH * renderScale);
-			int offsetX = (btnW - scaledBtnW) / 2;
-			int offsetY = (moduleBtnH - scaledBtnH) / 2;
-
-			GlassRenderer.renderRoundedRect(context, btnX + offsetX, btnY + offsetY, scaledBtnW, scaledBtnH,
-					btnBg, (int) (6 * scale));
-
-			if (hoverProg > 0.01f) {
-				GlassRenderer.renderHoverOverlay(context, btnX + offsetX, btnY + offsetY, scaledBtnW, scaledBtnH, hoverProg);
-			}
-
-			if (entry.module.isEnabled()) {
-				context.fill(btnX + offsetX, btnY + offsetY, btnX + offsetX + (int) (3 * scale), btnY + offsetY + scaledBtnH,
-						GlassRenderer.getGoldWithAlpha(180).getRGB());
-			}
-
-			String moduleName = entry.module.getName().toString();
-			int textY = btnY + (moduleBtnH - mc.textRenderer.fontHeight * 2) / 2;
-			int textColor = entry.module.isEnabled() ? GOLD.getRGB() : TEXT_WHITE.getRGB();
-			TextRenderer.drawString(moduleName, context, btnX + (int) (14 * scale), textY, textColor);
-
-			if (hovered && entry.module.getDescription() != null) {
-				renderModuleTooltip(context, mouseX, mouseY, entry.module.getDescription().toString(), scale);
+			if (entry.module == expandedModule) {
+				currentY = renderSettingsPanel(context, entry.module, btnX, currentY, btnW, scale, mouseX, mouseY, contentY, contentH);
 			}
 		}
 
 		context.disableScissor();
+	}
+
+	private int renderSettingsPanel(DrawContext context, Module module, int x, int startY, int w, float scale, int mouseX, int mouseY, int clipY, int clipH) {
+		List<Setting<?>> settings = module.getSettings();
+		int settingRowH = (int) (SETTING_ROW_HEIGHT * scale);
+		int y = startY;
+		int indent = (int) (10 * scale);
+
+		for (Setting<?> setting : settings) {
+			if (setting instanceof KeybindSetting kb && kb.isModuleKey()) continue;
+
+			boolean visible = y + settingRowH >= clipY && y <= clipY + clipH;
+
+			if (visible) {
+				context.fill(x + indent, y, x + w - indent, y + settingRowH,
+						new Color(255, 255, 255, 5).getRGB());
+				context.fill(x + indent, y + settingRowH - 1, x + w - indent, y + settingRowH,
+						new Color(255, 255, 255, 8).getRGB());
+
+				String settingName = setting.getName().toString();
+				int textY = y + (settingRowH - mc.textRenderer.fontHeight * 2) / 2;
+
+				if (setting instanceof BooleanSetting bs) {
+					TextRenderer.drawString(settingName, context, x + indent + (int) (8 * scale), textY, TEXT_DIM.getRGB());
+					String val = bs.getValue() ? "ON" : "OFF";
+					int valColor = bs.getValue() ? GOLD.getRGB() : TEXT_DIM.getRGB();
+					int valW = mc.textRenderer.getWidth(val) * 2;
+					TextRenderer.drawString(val, context, x + w - indent - valW - (int) (8 * scale), textY, valColor);
+				} else if (setting instanceof NumberSetting ns) {
+					TextRenderer.drawString(settingName, context, x + indent + (int) (8 * scale), textY, TEXT_DIM.getRGB());
+					String val = String.format("%.1f", ns.getValue());
+					int valW = mc.textRenderer.getWidth(val) * 2;
+					TextRenderer.drawString(val, context, x + w - indent - valW - (int) (8 * scale), textY, TEXT_WHITE.getRGB());
+
+					int barX = x + indent + (int) (8 * scale);
+					int barY = y + settingRowH - (int) (4 * scale);
+					int barW = w - indent * 2 - (int) (16 * scale);
+					int barH = (int) (2 * scale);
+					context.fill(barX, barY, barX + barW, barY + barH, new Color(255, 255, 255, 20).getRGB());
+					double progress = (ns.getValue() - ns.getMin()) / (ns.getMax() - ns.getMin());
+					int filledW = (int) (barW * progress);
+					context.fill(barX, barY, barX + filledW, barY + barH, GlassRenderer.getGoldWithAlpha(180).getRGB());
+				} else if (setting instanceof ModeSetting<?> ms) {
+					TextRenderer.drawString(settingName, context, x + indent + (int) (8 * scale), textY, TEXT_DIM.getRGB());
+					String val = ms.getMode().toString();
+					int valW = mc.textRenderer.getWidth(val) * 2;
+					TextRenderer.drawString(val, context, x + w - indent - valW - (int) (8 * scale), textY, GOLD.getRGB());
+				} else {
+					TextRenderer.drawString(settingName, context, x + indent + (int) (8 * scale), textY, TEXT_DIM.getRGB());
+				}
+			}
+
+			y += settingRowH;
+		}
+
+		y += (int) (4 * scale);
+		return y;
+	}
+
+	private String getKeybindText(Module module) {
+		int key = module.getKey();
+		if (key <= 0) return null;
+		String name = GLFW.glfwGetKeyName(key, 0);
+		if (name != null) return "[" + name.toUpperCase() + "]";
+		return "[" + key + "]";
 	}
 
 	private void renderModuleTooltip(DrawContext context, int mouseX, int mouseY, String description, float scale) {
@@ -421,7 +557,7 @@ public final class ClickGui extends Screen {
 			}
 		}
 
-		if (click.button() == 0 && pX >= pGuiX && pX <= pGuiX + pGuiW && pY >= pGuiY && pY <= pGuiY + pGuiH) {
+		if (pX >= pGuiX && pX <= pGuiX + pGuiW && pY >= pGuiY && pY <= pGuiY + pGuiH) {
 			if (pX >= pGuiX && pX <= pGuiX + pSidebarW) {
 				handleSidebarClick(pX, pY, pGuiX, pGuiY, pSidebarW, scaleFactor);
 			} else {
@@ -459,6 +595,7 @@ public final class ClickGui extends Screen {
 		int modulePad = (int) (MODULE_PADDING * scale);
 		int moduleMarginX = (int) (10 * scale);
 		int pScrollOffset = (int) (scrollOffset * scale);
+		int settingRowH = (int) (SETTING_ROW_HEIGHT * scale);
 
 		String query = getSearchQuery();
 		List<ModuleEntry> visibleModules = new ArrayList<>();
@@ -468,19 +605,58 @@ public final class ClickGui extends Screen {
 			}
 		}
 
+		int currentY = contentY + (int) (8 * scale) - pScrollOffset;
+
 		for (int i = 0; i < visibleModules.size(); i++) {
+			ModuleEntry entry = visibleModules.get(i);
 			int btnX = contentX + moduleMarginX;
-			int btnY = contentY + (int) (8 * scale) + i * (moduleBtnH + modulePad) - pScrollOffset;
+			int btnY = currentY;
 			int btnW = contentW - moduleMarginX * 2;
 
 			if (mouseX >= btnX && mouseX <= btnX + btnW
 					&& mouseY >= btnY && mouseY <= btnY + moduleBtnH
 					&& mouseY >= contentY && mouseY <= contentY + contentH) {
 				if (button == 0) {
-					visibleModules.get(i).module.toggle();
+					entry.module.toggle();
+				} else if (button == 1) {
+					expandedModule = (expandedModule == entry.module) ? null : entry.module;
 				}
-				break;
+				return;
 			}
+
+			currentY += moduleBtnH + modulePad;
+
+			if (entry.module == expandedModule) {
+				List<Setting<?>> settings = entry.module.getSettings();
+				int indent = (int) (10 * scale);
+				for (Setting<?> setting : settings) {
+					if (setting instanceof KeybindSetting kb && kb.isModuleKey()) continue;
+
+					if (mouseX >= btnX + indent && mouseX <= btnX + btnW - indent
+							&& mouseY >= currentY && mouseY <= currentY + settingRowH
+							&& mouseY >= contentY && mouseY <= contentY + contentH) {
+						handleSettingClick(setting, button);
+						return;
+					}
+					currentY += settingRowH;
+				}
+				currentY += (int) (4 * scale);
+			}
+		}
+	}
+
+	private void handleSettingClick(Setting<?> setting, int button) {
+		if (setting instanceof BooleanSetting bs) {
+			bs.toggle();
+		} else if (setting instanceof NumberSetting ns) {
+			double increment = ns.getIncrement();
+			if (button == 0) {
+				ns.setValue(ns.getValue() + increment);
+			} else if (button == 1) {
+				ns.setValue(ns.getValue() - increment);
+			}
+		} else if (setting instanceof ModeSetting<?> ms) {
+			ms.cycle();
 		}
 	}
 
@@ -519,6 +695,7 @@ public final class ClickGui extends Screen {
 	public void onGuiClose() {
 		mc.setScreenAndRender(system.INSTANCE.previousScreen);
 		currentColor = null;
+		expandedModule = null;
 		if (searchField != null) {
 			searchField.setText("");
 			searchField.setFocused(false);

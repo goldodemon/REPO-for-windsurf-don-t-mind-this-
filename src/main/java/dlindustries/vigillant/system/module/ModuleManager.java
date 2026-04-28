@@ -32,6 +32,9 @@ public final class ModuleManager implements ButtonListener {
 		add(new AutoPot());
 		add(new AutoPotRefill());
 		add(new AutoWTap());
+		add(new STap());
+		add(new Velocity());
+		add(new Reach());
 
 		add(new ShieldDisabler());
 		add(new AutoJumpReset());
@@ -39,6 +42,7 @@ public final class ModuleManager implements ButtonListener {
 		add(new HoverTotem());
 		add(new AnchorMacro());
 		add(new AirAnchor());
+		add(new AnchorOptimizer());
 		add(new AutoCrystal());
 		add(new AutoDoubleHand());
 		add(new dtapsetup());
