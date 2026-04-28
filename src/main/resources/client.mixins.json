@@ -41,7 +41,8 @@
     "ParticlesMixin$InGameOverlayRendererMixin",
     "ParticlesMixin$InGameHudMixin",
     "SwingSpeedMixin",
-    "TextVisitFactoryMixin"
+    "TextVisitFactoryMixin",
+    "ReachMixin"
 
   ],
   "injectors": {

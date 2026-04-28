@@ -455,6 +455,21 @@ public final class ClickGui extends Screen {
 					double progress = (ns.getValue() - ns.getMin()) / (ns.getMax() - ns.getMin());
 					int filledW = (int) (barW * progress);
 					context.fill(barX, barY, barX + filledW, barY + barH, GlassRenderer.getGoldWithAlpha(180).getRGB());
+				} else if (setting instanceof MinMaxSetting mms) {
+					TextRenderer.drawString(settingName, context, x + indent + (int) (8 * scale), textY, TEXT_DIM.getRGB());
+					String val = String.format("%.0f - %.0f", mms.getMinValue(), mms.getMaxValue());
+					int valW = mc.textRenderer.getWidth(val) * 2;
+					TextRenderer.drawString(val, context, x + w - indent - valW - (int) (8 * scale), textY, TEXT_WHITE.getRGB());
+
+					int barX = x + indent + (int) (8 * scale);
+					int barY = y + settingRowH - (int) (4 * scale);
+					int barW = w - indent * 2 - (int) (16 * scale);
+					int barH = (int) (2 * scale);
+					context.fill(barX, barY, barX + barW, barY + barH, new Color(255, 255, 255, 20).getRGB());
+					double range = mms.getMax() - mms.getMin();
+					int minFill = (int) (barW * ((mms.getMinValue() - mms.getMin()) / range));
+					int maxFill = (int) (barW * ((mms.getMaxValue() - mms.getMin()) / range));
+					context.fill(barX + minFill, barY, barX + maxFill, barY + barH, GlassRenderer.getGoldWithAlpha(180).getRGB());
 				} else if (setting instanceof ModeSetting<?> ms) {
 					TextRenderer.drawString(settingName, context, x + indent + (int) (8 * scale), textY, TEXT_DIM.getRGB());
 					String val = ms.getMode().toString();
@@ -646,6 +661,13 @@ public final class ClickGui extends Screen {
 	private void handleSettingClick(Setting<?> setting, int button) {
 		if (setting instanceof BooleanSetting bs) {
 			bs.toggle();
+		} else if (setting instanceof MinMaxSetting mms) {
+			double increment = mms.getIncrement();
+			if (button == 0) {
+				mms.setMaxValue(mms.getMaxValue() + increment);
+			} else if (button == 1) {
+				mms.setMinValue(mms.getMinValue() + increment);
+			}
 		} else if (setting instanceof NumberSetting ns) {
 			double increment = ns.getIncrement();
 			if (button == 0) {
