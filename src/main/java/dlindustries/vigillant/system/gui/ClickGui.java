@@ -416,7 +416,11 @@ public final class ClickGui extends Screen {
 			currentY += moduleBtnH + modulePad;
 
 			if (entry.module == expandedModule) {
-				currentY = renderSettingsPanel(context, entry.module, btnX, currentY, btnW, scale, mouseX, mouseY, contentY, contentH);
+				try {
+					currentY = renderSettingsPanel(context, entry.module, btnX, currentY, btnW, scale, mouseX, mouseY, contentY, contentH);
+				} catch (Exception e) {
+					currentY += (int) (4 * scale);
+				}
 			}
 		}
 
@@ -425,22 +429,25 @@ public final class ClickGui extends Screen {
 
 	private int renderSettingsPanel(DrawContext context, Module module, int x, int startY, int w, float scale, int mouseX, int mouseY, int clipY, int clipH) {
 		List<Setting<?>> settings = module.getSettings();
+		if (settings == null) return startY;
 		int settingRowH = (int) (SETTING_ROW_HEIGHT * scale);
 		int y = startY;
 		int indent = (int) (10 * scale);
 
 		for (Setting<?> setting : settings) {
+			if (setting == null) continue;
 			if (setting instanceof KeybindSetting kb && kb.isModuleKey()) continue;
 
 			boolean visible = y + settingRowH >= clipY && y <= clipY + clipH;
 
 			if (visible) {
+			  try {
 				context.fill(x + indent, y, x + w - indent, y + settingRowH,
 						new Color(255, 255, 255, 5).getRGB());
 				context.fill(x + indent, y + settingRowH - 1, x + w - indent, y + settingRowH,
 						new Color(255, 255, 255, 8).getRGB());
 
-				String settingName = setting.getName().toString();
+				String settingName = setting.getName() != null ? setting.getName().toString() : "?";
 				int textY = y + (settingRowH - mc.textRenderer.fontHeight * 2) / 2;
 
 				if (setting instanceof BooleanSetting bs) {
@@ -504,6 +511,7 @@ public final class ClickGui extends Screen {
 				} else {
 					TextRenderer.drawString(settingName, context, x + indent + (int) (8 * scale), textY, TEXT_DIM.getRGB());
 				}
+			  } catch (Exception ignored) {}
 			}
 
 			y += settingRowH;
@@ -697,25 +705,27 @@ public final class ClickGui extends Screen {
 	}
 
 	private void handleSettingClick(Setting<?> setting, int button) {
-		if (setting instanceof BooleanSetting bs) {
-			bs.toggle();
-		} else if (setting instanceof MinMaxSetting mms) {
-			double increment = mms.getIncrement();
-			if (button == 0) {
-				mms.setMaxValue(mms.getMaxValue() + increment);
-			} else if (button == 1) {
-				mms.setMinValue(mms.getMinValue() + increment);
+		try {
+			if (setting instanceof BooleanSetting bs) {
+				bs.toggle();
+			} else if (setting instanceof MinMaxSetting mms) {
+				double increment = mms.getIncrement();
+				if (button == 0) {
+					mms.setMaxValue(mms.getMaxValue() + increment);
+				} else if (button == 1) {
+					mms.setMinValue(mms.getMinValue() + increment);
+				}
+			} else if (setting instanceof NumberSetting ns) {
+				double increment = ns.getIncrement();
+				if (button == 0) {
+					ns.setValue(ns.getValue() + increment);
+				} else if (button == 1) {
+					ns.setValue(ns.getValue() - increment);
+				}
+			} else if (setting instanceof ModeSetting<?> ms) {
+				ms.cycle();
 			}
-		} else if (setting instanceof NumberSetting ns) {
-			double increment = ns.getIncrement();
-			if (button == 0) {
-				ns.setValue(ns.getValue() + increment);
-			} else if (button == 1) {
-				ns.setValue(ns.getValue() - increment);
-			}
-		} else if (setting instanceof ModeSetting<?> ms) {
-			ms.cycle();
-		}
+		} catch (Exception ignored) {}
 	}
 
 	@Override
