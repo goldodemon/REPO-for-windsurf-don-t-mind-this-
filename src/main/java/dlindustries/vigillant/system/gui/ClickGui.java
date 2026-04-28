@@ -177,8 +177,6 @@ public final class ClickGui extends Screen {
 		Color innerHighlight = new Color(255, 255, 255, 6);
 		context.fill(pGuiX + 2, pGuiY + 2, pGuiX + pGuiW - 2, pGuiY + 3, innerHighlight.getRGB());
 
-		GlassRenderer.renderMouseGlow(context, pMouseX, pMouseY, pGuiX, pGuiY, pGuiW, pGuiH);
-
 		renderSidebar(context, pGuiX, pGuiY, pSidebarW, pGuiH, pMouseX, pMouseY, dt, scaleFactor);
 
 		renderModulePanel(context, pGuiX + pSidebarW, pGuiY, pGuiW - pSidebarW, pGuiH, pMouseX, pMouseY, dt, scaleFactor);

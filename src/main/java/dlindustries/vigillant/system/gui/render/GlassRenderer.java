@@ -67,7 +67,7 @@ public final class GlassRenderer {
 	public static void renderHoverOverlay(DrawContext context, int x, int y, int w, int h, float hoverProgress) {
 		if (hoverProgress <= 0.001f) return;
 		int alpha = (int) (38 * hoverProgress);
-		Color overlay = new Color(255, 215, 0, alpha);
+		Color overlay = new Color(255, 255, 255, alpha);
 		context.fill(x, y, x + w, y + h, overlay.getRGB());
 	}
 
