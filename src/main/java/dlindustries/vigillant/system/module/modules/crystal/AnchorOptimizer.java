@@ -49,7 +49,7 @@ public final class AnchorOptimizer extends Module implements TickListener {
 		super(EncryptedString.of("Anchor Optimizer"),
 				EncryptedString.of("Optimizes anchor PvP for instant-feel placement and detonation"),
 				-1,
-				Category.CRYSTAL);
+				Category.optimizer);
 		addSettings(placeDelay, chargeDelay, detonateDelay, autoSwitch, instantDetonate, antiWaste, switchBack);
 	}
 

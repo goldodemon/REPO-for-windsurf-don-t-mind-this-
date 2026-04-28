@@ -34,6 +34,10 @@ public final class ModuleManager implements ButtonListener {
 		add(new AutoPotRefill());
 		add(new AutoWTap());
 		add(new STap());
+		add(new CPSRandomizer());
+		add(new HitSelect());
+		add(new TargetStrafe());
+		add(new ComboOptimizer());
 		add(new Velocity());
 		add(new Reach());
 		add(new AutoTotem());
