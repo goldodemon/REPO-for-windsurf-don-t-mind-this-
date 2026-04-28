@@ -1,6 +1,7 @@
 package dlindustries.vigillant.system.module;
 
 import dlindustries.vigillant.system.event.events.ButtonListener;
+import dlindustries.vigillant.system.module.modules.blatant.*;
 import dlindustries.vigillant.system.module.modules.client.*;
 import dlindustries.vigillant.system.module.modules.crystal.*;
 import dlindustries.vigillant.system.module.modules.sword.*;
@@ -35,6 +36,7 @@ public final class ModuleManager implements ButtonListener {
 		add(new STap());
 		add(new Velocity());
 		add(new Reach());
+		add(new AutoTotem());
 
 		add(new ShieldDisabler());
 		add(new AutoJumpReset());

@@ -18,7 +18,7 @@ public final class Velocity extends Module implements PacketReceiveListener {
 		super(EncryptedString.of("Velocity"),
 				EncryptedString.of("Reduces or cancels incoming knockback"),
 				-1,
-				Category.sword);
+				Category.BLATANT);
 		addSettings(horizontal, vertical);
 	}
 

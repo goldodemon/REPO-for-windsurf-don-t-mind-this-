@@ -42,7 +42,7 @@ public final class ClickGui extends Screen {
 	private static final Color TEXT_DIM = new Color(160, 160, 160);
 	private static final Color SEPARATOR = new Color(255, 255, 255, 20);
 
-	private static final String[] DISPLAY_GROUPS = {"Sword", "Crystal", "Mace", "Render", "Other"};
+	private static final String[] DISPLAY_GROUPS = {"Sword", "Crystal", "Mace", "Render", "Blatant", "Other"};
 
 	private final Map<String, List<Category>> categoryGroups = new LinkedHashMap<>();
 	private String activeGroup;
@@ -91,6 +91,8 @@ public final class ClickGui extends Screen {
 			return "Mace";
 		} else if (name.equalsIgnoreCase("Render") || name.equalsIgnoreCase("Esp and Visuals")) {
 			return "Render";
+		} else if (name.equalsIgnoreCase("Blatant")) {
+			return "Blatant";
 		}
 		return "Other";
 	}

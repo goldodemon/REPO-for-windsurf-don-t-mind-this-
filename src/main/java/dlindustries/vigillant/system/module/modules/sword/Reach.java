@@ -15,7 +15,7 @@ public final class Reach extends Module {
 		super(EncryptedString.of("Reach"),
 				EncryptedString.of("Extends your attack and interaction reach"),
 				-1,
-				Category.sword);
+				Category.BLATANT);
 		addSettings(attackRange, interactRange);
 	}
 
