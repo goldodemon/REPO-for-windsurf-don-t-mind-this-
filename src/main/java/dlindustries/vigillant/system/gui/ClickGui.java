@@ -5,10 +5,7 @@ import dlindustries.vigillant.system.gui.render.GlassRenderer;
 import dlindustries.vigillant.system.module.Category;
 import dlindustries.vigillant.system.module.Module;
 import dlindustries.vigillant.system.module.modules.client.ClickGUI;
-import dlindustries.vigillant.system.utils.ColorUtils;
-import dlindustries.vigillant.system.utils.RenderUtils;
 import dlindustries.vigillant.system.utils.TextRenderer;
-import dlindustries.vigillant.system.utils.Utils;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.TextFieldWidget;
@@ -19,7 +16,9 @@ import net.minecraft.util.Identifier;
 
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import static dlindustries.vigillant.system.system.mc;
 
@@ -40,15 +39,15 @@ public final class ClickGui extends Screen {
 	private static final Color TEXT_WHITE = new Color(230, 230, 230);
 	private static final Color TEXT_DIM = new Color(160, 160, 160);
 	private static final Color SEPARATOR = new Color(255, 255, 255, 20);
-	private static final Identifier LOGO_TEXTURE = Identifier.of("system", "icon.png");
 
-	private Category activeCategory;
+	private static final String[] DISPLAY_GROUPS = {"Combat", "Render", "Other"};
+
+	private final Map<String, List<Category>> categoryGroups = new LinkedHashMap<>();
+	private String activeGroup;
 	private final List<ModuleEntry> moduleEntries = new ArrayList<>();
 	private int guiX, guiY;
 	private int scrollOffset;
 	private int maxScroll;
-	private boolean dragging;
-	private int dragOffsetX, dragOffsetY;
 	private float[] categoryHoverProgress;
 	private float[] moduleHoverProgress;
 	private long lastRenderTime;
@@ -59,13 +58,35 @@ public final class ClickGui extends Screen {
 
 	public ClickGui() {
 		super(Text.empty());
-		activeCategory = Category.values()[0];
-		categoryHoverProgress = new float[Category.values().length];
+		buildCategoryGroups();
+		activeGroup = DISPLAY_GROUPS[0];
+		categoryHoverProgress = new float[DISPLAY_GROUPS.length];
 		rebuildModuleList();
 
 		for (Category category : Category.values()) {
 			windows.add(new Window(0, 0, 230, 30, category, this));
 		}
+	}
+
+	private void buildCategoryGroups() {
+		for (String group : DISPLAY_GROUPS) {
+			categoryGroups.put(group, new ArrayList<>());
+		}
+		for (Category cat : Category.values()) {
+			String group = mapCategoryToGroup(cat);
+			categoryGroups.get(group).add(cat);
+		}
+	}
+
+	private String mapCategoryToGroup(Category cat) {
+		String name = cat.name.toString();
+		if (name.equalsIgnoreCase("Sword") || name.equalsIgnoreCase("Crystal")
+				|| name.equalsIgnoreCase("Potions") || name.equalsIgnoreCase("SpearMace")) {
+			return "Combat";
+		} else if (name.equalsIgnoreCase("Render") || name.equalsIgnoreCase("Esp and Visuals")) {
+			return "Render";
+		}
+		return "Other";
 	}
 
 	@Override
@@ -93,14 +114,19 @@ public final class ClickGui extends Screen {
 	}
 
 	public boolean isDraggingAlready() {
-		return dragging;
+		return false;
 	}
 
 	private void rebuildModuleList() {
 		moduleEntries.clear();
-		List<Module> modules = system.INSTANCE.getModuleManager().getModulesInCategory(activeCategory);
-		for (Module module : modules) {
-			moduleEntries.add(new ModuleEntry(module));
+		List<Category> cats = categoryGroups.get(activeGroup);
+		if (cats != null) {
+			for (Category cat : cats) {
+				List<Module> modules = system.INSTANCE.getModuleManager().getModulesInCategory(cat);
+				for (Module module : modules) {
+					moduleEntries.add(new ModuleEntry(module));
+				}
+			}
 		}
 		moduleHoverProgress = new float[moduleEntries.size()];
 		scrollOffset = 0;
@@ -114,7 +140,9 @@ public final class ClickGui extends Screen {
 		float dt = Math.min((now - lastRenderTime) / 1000.0f, 0.05f);
 		lastRenderTime = now;
 
-		mc.gameRenderer.renderBlur();
+		if (ClickGUI.blur.getValue()) {
+			mc.gameRenderer.renderBlur();
+		}
 
 		float scaleFactor = (float) mc.getWindow().getScaleFactor();
 		float invScale = 1.0f / scaleFactor;
@@ -129,16 +157,18 @@ public final class ClickGui extends Screen {
 		int pGuiW = (int) (GUI_WIDTH * scaleFactor);
 		int pGuiH = (int) (GUI_HEIGHT * scaleFactor);
 		int pSidebarW = (int) (SIDEBAR_WIDTH * scaleFactor);
-		int pHeaderH = (int) (HEADER_HEIGHT * scaleFactor);
 		int pCorner = (int) (CORNER_RADIUS * scaleFactor);
 
-		context.fill(0, 0, mc.getWindow().getWidth(), mc.getWindow().getHeight(), new Color(0, 0, 0, 120).getRGB());
+		context.fill(0, 0, mc.getWindow().getWidth(), mc.getWindow().getHeight(), new Color(0, 0, 0, 100).getRGB());
 
 		GlassRenderer.renderRoundedRect(context, pGuiX, pGuiY, pGuiW, pGuiH,
 				new Color(10, 10, 10, 102), pCorner);
 
 		GlassRenderer.renderRoundedBorder(context, pGuiX, pGuiY, pGuiW, pGuiH,
 				new Color(255, 255, 255, 25), pCorner, 1.5);
+
+		Color innerHighlight = new Color(255, 255, 255, 6);
+		context.fill(pGuiX + 2, pGuiY + 2, pGuiX + pGuiW - 2, pGuiY + 3, innerHighlight.getRGB());
 
 		GlassRenderer.renderMouseGlow(context, pMouseX, pMouseY, pGuiX, pGuiY, pGuiW, pGuiH);
 
@@ -162,18 +192,20 @@ public final class ClickGui extends Screen {
 		context.fill(x + w - 1, y, x + w, y + h, SEPARATOR.getRGB());
 
 		int headerH = (int) (HEADER_HEIGHT * scale);
-		int logoSize = (int) (24 * scale);
-		int logoX = x + (int) (12 * scale);
-		int logoY = y + (headerH - logoSize) / 2;
 
-		context.fill(logoX, logoY, logoX + logoSize, logoY + logoSize, new Color(80, 80, 80, 100).getRGB());
+		int logoSize = (int) (20 * scale);
+		int logoX = x + (int) (14 * scale);
+		int logoY = y + (headerH - logoSize) / 2;
+		context.fill(logoX, logoY, logoX + logoSize, logoY + logoSize, new Color(180, 160, 100, 120).getRGB());
 
 		String title = "SYSTEM CLIENT";
+		int titleTextW = mc.textRenderer.getWidth(title);
+		int availableW = w - (int) (14 * scale) - logoSize - (int) (8 * scale) - (int) (6 * scale);
+		float textScale = Math.min(1.2f, (float) availableW / titleTextW);
 		int titleX = logoX + logoSize + (int) (8 * scale);
-		int titleY = y + (headerH / 2) - (mc.textRenderer.fontHeight);
+		int titleY = y + (headerH / 2) - (int) (mc.textRenderer.fontHeight * textScale / 2);
 		var matrices = context.getMatrices();
 		matrices.pushMatrix();
-		float textScale = 1.4f;
 		matrices.translate(titleX, titleY);
 		matrices.scale(textScale, textScale);
 		context.drawText(mc.textRenderer, title, 0, 0, TEXT_WHITE.getRGB(), false);
@@ -181,20 +213,19 @@ public final class ClickGui extends Screen {
 
 		context.fill(x + (int) (10 * scale), y + headerH - 1, x + w - (int) (10 * scale), y + headerH, SEPARATOR.getRGB());
 
-		Category[] categories = Category.values();
 		int catStartY = y + headerH + (int) (10 * scale);
 		int catBtnH = (int) (CATEGORY_BUTTON_HEIGHT * scale);
 		int catPad = (int) (CATEGORY_PADDING * scale);
 		int catMarginX = (int) (8 * scale);
 
-		for (int i = 0; i < categories.length; i++) {
-			Category cat = categories[i];
+		for (int i = 0; i < DISPLAY_GROUPS.length; i++) {
+			String group = DISPLAY_GROUPS[i];
 			int btnX = x + catMarginX;
 			int btnY = catStartY + i * (catBtnH + catPad);
 			int btnW = w - catMarginX * 2;
 
 			boolean hovered = mouseX >= btnX && mouseX <= btnX + btnW && mouseY >= btnY && mouseY <= btnY + catBtnH;
-			boolean active = cat == activeCategory;
+			boolean active = group.equals(activeGroup);
 
 			float targetHover = hovered ? 1.0f : 0.0f;
 			categoryHoverProgress[i] += (targetHover - categoryHoverProgress[i]) * Math.min(1.0f, dt * 10.0f);
@@ -211,10 +242,9 @@ public final class ClickGui extends Screen {
 						new Color(255, 255, 255, hoverAlpha), (int) (6 * scale));
 			}
 
-			String catName = getCategoryDisplayName(cat);
 			int textY = btnY + (catBtnH - mc.textRenderer.fontHeight * 2) / 2;
 			int textColor = active ? GOLD.getRGB() : (hovered ? TEXT_WHITE.getRGB() : TEXT_DIM.getRGB());
-			TextRenderer.drawString(catName, context, btnX + (int) (14 * scale), textY, textColor);
+			TextRenderer.drawString(group, context, btnX + (int) (14 * scale), textY, textColor);
 		}
 	}
 
@@ -225,14 +255,13 @@ public final class ClickGui extends Screen {
 
 		context.fill(x, y + headerH - 1, x + w, y + headerH, SEPARATOR.getRGB());
 
-		String catTitle = getCategoryDisplayName(activeCategory);
 		int titleX = x + (int) (15 * scale);
-		int titleY = y + (headerH / 2) - mc.textRenderer.fontHeight;
+		int titleY = y + (headerH / 2) - (int) (mc.textRenderer.fontHeight * 0.9f);
 		var matrices = context.getMatrices();
 		matrices.pushMatrix();
 		matrices.translate(titleX, titleY);
 		matrices.scale(1.8f, 1.8f);
-		context.drawText(mc.textRenderer, catTitle, 0, 0, TEXT_WHITE.getRGB(), false);
+		context.drawText(mc.textRenderer, activeGroup, 0, 0, TEXT_WHITE.getRGB(), false);
 		matrices.popMatrix();
 
 		String query = getSearchQuery();
@@ -344,19 +373,6 @@ public final class ClickGui extends Screen {
 		TextRenderer.drawString(credits, context, creditsX, creditsY, new Color(120, 120, 120, 150).getRGB());
 	}
 
-	private String getCategoryDisplayName(Category cat) {
-		String name = cat.name.toString();
-		if (name.equalsIgnoreCase("Sword") || name.equalsIgnoreCase("Crystal")
-				|| name.equalsIgnoreCase("Potions") || name.equalsIgnoreCase("SpearMace")) {
-			return "Combat";
-		} else if (name.equalsIgnoreCase("Render") || name.equalsIgnoreCase("Esp and Visuals")) {
-			return "Render";
-		} else if (name.equalsIgnoreCase("Utilities") || name.equalsIgnoreCase("Client")) {
-			return "Other";
-		}
-		return name;
-	}
-
 	@Override
 	public boolean keyPressed(KeyInput keyInput) {
 		if (searchField != null && searchField.isFocused()) {
@@ -422,14 +438,13 @@ public final class ClickGui extends Screen {
 		int catMarginX = (int) (8 * scale);
 		int catStartY = guiY + headerH + (int) (10 * scale);
 
-		Category[] categories = Category.values();
-		for (int i = 0; i < categories.length; i++) {
+		for (int i = 0; i < DISPLAY_GROUPS.length; i++) {
 			int btnX = sidebarX + catMarginX;
 			int btnY = catStartY + i * (catBtnH + catPad);
 			int btnW = sidebarW - catMarginX * 2;
 
 			if (mouseX >= btnX && mouseX <= btnX + btnW && mouseY >= btnY && mouseY <= btnY + catBtnH) {
-				activeCategory = categories[i];
+				activeGroup = DISPLAY_GROUPS[i];
 				rebuildModuleList();
 				break;
 			}
