@@ -12,9 +12,6 @@
 
     <style>
         :root {
-            --glow-x: 50%;
-            --glow-y: 50%;
-            --glow-opacity: 1;
             --gold: #ffb830;
             --gold-light: #ffd06a;
             --gold-dark: #e59400;
@@ -51,25 +48,27 @@
         /* ── The main ambient glow overlay that follows the mouse ── */
         .glow-overlay {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
             pointer-events: none;
             z-index: 1;
-            opacity: var(--glow-opacity);
+            width: 1100px;
+            height: 1100px;
+            top: -550px;
+            left: -550px;
+            border-radius: 50%;
             background:
-                radial-gradient(circle 550px at var(--glow-x) var(--glow-y),
+                radial-gradient(circle at center,
                     rgba(255, 175, 35, 0.12) 0%,
                     rgba(255, 150, 20, 0.05) 20%,
                     rgba(255, 120, 10, 0.02) 40%,
                     transparent 65%),
-                radial-gradient(circle 180px at var(--glow-x) var(--glow-y),
+                radial-gradient(circle 180px at center,
                     rgba(255, 200, 60, 0.16) 0%,
                     rgba(255, 160, 30, 0.06) 30%,
                     transparent 60%);
+            opacity: 0;
             transition: opacity 0.5s ease;
-            will-change: background;
+            will-change: transform, opacity;
+            contain: layout style;
         }
 
         /* ── Subtle vignette ── */
@@ -808,20 +807,33 @@
             let currentY = targetY;
             let mouseOnScreen = false;
             let animationId = null;
+            let isAnimating = false;
             const LERP_FACTOR = 0.09;
+            const IDLE_THRESHOLD = 0.5;
 
             function updateGlowPosition(x, y) {
-                const px = (x / window.innerWidth) * 100;
-                const py = (y / window.innerHeight) * 100;
-                glowOverlay.style.setProperty('--glow-x', `${px}%`);
-                glowOverlay.style.setProperty('--glow-y', `${py}%`);
+                glowOverlay.style.transform = `translate3d(${x}px, ${y}px, 0)`;
             }
 
             function animate() {
-                currentX += (targetX - currentX) * LERP_FACTOR;
-                currentY += (targetY - currentY) * LERP_FACTOR;
+                const dx = targetX - currentX;
+                const dy = targetY - currentY;
+                currentX += dx * LERP_FACTOR;
+                currentY += dy * LERP_FACTOR;
                 updateGlowPosition(currentX, currentY);
+                if (Math.abs(dx) < IDLE_THRESHOLD && Math.abs(dy) < IDLE_THRESHOLD && !mouseOnScreen) {
+                    isAnimating = false;
+                    animationId = null;
+                    return;
+                }
                 animationId = requestAnimationFrame(animate);
+            }
+
+            function startAnimation() {
+                if (!isAnimating) {
+                    isAnimating = true;
+                    animationId = requestAnimationFrame(animate);
+                }
             }
 
             function onMouseMove(e) {
@@ -832,8 +844,9 @@
                     currentX = targetX;
                     currentY = targetY;
                     updateGlowPosition(currentX, currentY);
-                    glowOverlay.style.setProperty('--glow-opacity', '1');
+                    glowOverlay.style.opacity = '1';
                 }
+                startAnimation();
             }
 
             function onMouseEnter(e) {
@@ -843,12 +856,13 @@
                 currentX = targetX;
                 currentY = targetY;
                 updateGlowPosition(currentX, currentY);
-                glowOverlay.style.setProperty('--glow-opacity', '1');
+                glowOverlay.style.opacity = '1';
+                startAnimation();
             }
 
             function onMouseLeave() {
                 mouseOnScreen = false;
-                glowOverlay.style.setProperty('--glow-opacity', '0');
+                glowOverlay.style.opacity = '0';
                 targetX = window.innerWidth / 2;
                 targetY = window.innerHeight / 2;
             }
@@ -862,14 +876,15 @@
                         currentX = targetX;
                         currentY = targetY;
                         updateGlowPosition(currentX, currentY);
-                        glowOverlay.style.setProperty('--glow-opacity', '1');
+                        glowOverlay.style.opacity = '1';
                     }
+                    startAnimation();
                 }
             }
 
             function onTouchEnd() {
                 mouseOnScreen = false;
-                glowOverlay.style.setProperty('--glow-opacity', '0');
+                glowOverlay.style.opacity = '0';
                 targetX = window.innerWidth / 2;
                 targetY = window.innerHeight / 2;
             }
@@ -888,7 +903,7 @@
 
             // ── Particles ──
             function createParticles() {
-                const particleCount = 30;
+                const particleCount = 18;
                 const fragment = document.createDocumentFragment();
                 for (let i = 0; i < particleCount; i++) {
                     const particle = document.createElement('div');
@@ -915,7 +930,7 @@
             // ── Init ──
             function init() {
                 updateGlowPosition(window.innerWidth / 2, window.innerHeight / 2);
-                glowOverlay.style.setProperty('--glow-opacity', '0');
+                glowOverlay.style.opacity = '0';
                 createParticles();
 
                 document.addEventListener('mousemove', onMouseMove, { passive: true });
@@ -926,7 +941,6 @@
                 document.addEventListener('touchcancel', onTouchEnd);
                 window.addEventListener('resize', onResize);
 
-                animationId = requestAnimationFrame(animate);
                 targetX = window.innerWidth / 2;
                 targetY = window.innerHeight / 2;
                 currentX = targetX;
