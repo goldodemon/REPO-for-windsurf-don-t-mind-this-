@@ -35,7 +35,9 @@ public final class ClickGui extends Screen {
 	private static final int MODULE_PADDING = 3;
 	private static final int CORNER_RADIUS = 12;
 	private static final int SCROLL_SPEED = 20;
-	private static final int SETTING_ROW_HEIGHT = 22;
+	private static final int SETTING_ROW_HEIGHT = 24;
+	private static final int SLIDER_BAR_HEIGHT = 6;
+	private static final int SLIDER_HIT_HEIGHT = 14;
 
 	private static final Color GOLD = new Color(255, 215, 0);
 	private static final Color TEXT_WHITE = new Color(230, 230, 230);
@@ -55,6 +57,10 @@ public final class ClickGui extends Screen {
 	private long lastRenderTime;
 	private TextFieldWidget searchField;
 	private Module expandedModule;
+
+	private Setting<?> draggingSetting;
+	private int dragBarX, dragBarW;
+	private int dragType; // 0 = single/number, 1 = minmax-min, 2 = minmax-max
 
 	public Color currentColor;
 	public List<Window> windows = new ArrayList<>();
@@ -450,13 +456,18 @@ public final class ClickGui extends Screen {
 					TextRenderer.drawString(val, context, x + w - indent - valW - (int) (8 * scale), textY, TEXT_WHITE.getRGB());
 
 					int barX = x + indent + (int) (8 * scale);
-					int barY = y + settingRowH - (int) (4 * scale);
+					int barY = y + settingRowH - (int) (SLIDER_BAR_HEIGHT * scale) - (int) (2 * scale);
 					int barW = w - indent * 2 - (int) (16 * scale);
-					int barH = (int) (2 * scale);
-					context.fill(barX, barY, barX + barW, barY + barH, new Color(255, 255, 255, 20).getRGB());
+					int barH = (int) (SLIDER_BAR_HEIGHT * scale);
+					GlassRenderer.renderRoundedRect(context, barX, barY, barW, barH, new Color(255, 255, 255, 20), (int) (2 * scale));
 					double progress = (ns.getValue() - ns.getMin()) / (ns.getMax() - ns.getMin());
-					int filledW = (int) (barW * progress);
-					context.fill(barX, barY, barX + filledW, barY + barH, GlassRenderer.getGoldWithAlpha(180).getRGB());
+					int filledW = Math.max((int) (4 * scale), (int) (barW * progress));
+					GlassRenderer.renderRoundedRect(context, barX, barY, filledW, barH, GlassRenderer.getGoldWithAlpha(180), (int) (2 * scale));
+					int knobX = barX + filledW - (int) (3 * scale);
+					int knobSize = (int) (6 * scale);
+					boolean hovering = mouseX >= barX && mouseX <= barX + barW && mouseY >= barY - (int)(4 * scale) && mouseY <= barY + barH + (int)(4 * scale);
+					Color knobColor = (draggingSetting == ns || hovering) ? new Color(255, 235, 150) : new Color(255, 215, 0);
+					GlassRenderer.renderRoundedRect(context, knobX, barY - (int)(1 * scale), knobSize, barH + (int)(2 * scale), knobColor, (int) (3 * scale));
 				} else if (setting instanceof MinMaxSetting mms) {
 					TextRenderer.drawString(settingName, context, x + indent + (int) (8 * scale), textY, TEXT_DIM.getRGB());
 					String val = String.format("%.0f - %.0f", mms.getMinValue(), mms.getMaxValue());
@@ -464,14 +475,21 @@ public final class ClickGui extends Screen {
 					TextRenderer.drawString(val, context, x + w - indent - valW - (int) (8 * scale), textY, TEXT_WHITE.getRGB());
 
 					int barX = x + indent + (int) (8 * scale);
-					int barY = y + settingRowH - (int) (4 * scale);
+					int barY = y + settingRowH - (int) (SLIDER_BAR_HEIGHT * scale) - (int) (2 * scale);
 					int barW = w - indent * 2 - (int) (16 * scale);
-					int barH = (int) (2 * scale);
-					context.fill(barX, barY, barX + barW, barY + barH, new Color(255, 255, 255, 20).getRGB());
+					int barH = (int) (SLIDER_BAR_HEIGHT * scale);
+					GlassRenderer.renderRoundedRect(context, barX, barY, barW, barH, new Color(255, 255, 255, 20), (int) (2 * scale));
 					double range = mms.getMax() - mms.getMin();
 					int minFill = (int) (barW * ((mms.getMinValue() - mms.getMin()) / range));
 					int maxFill = (int) (barW * ((mms.getMaxValue() - mms.getMin()) / range));
-					context.fill(barX + minFill, barY, barX + maxFill, barY + barH, GlassRenderer.getGoldWithAlpha(180).getRGB());
+					GlassRenderer.renderRoundedRect(context, barX + minFill, barY, maxFill - minFill, barH, GlassRenderer.getGoldWithAlpha(180), (int) (2 * scale));
+					int knobSize = (int) (6 * scale);
+					boolean hoveringMin = mouseX >= barX + minFill - (int)(6 * scale) && mouseX <= barX + minFill + (int)(6 * scale) && mouseY >= barY - (int)(4 * scale) && mouseY <= barY + barH + (int)(4 * scale);
+					boolean hoveringMax = mouseX >= barX + maxFill - (int)(6 * scale) && mouseX <= barX + maxFill + (int)(6 * scale) && mouseY >= barY - (int)(4 * scale) && mouseY <= barY + barH + (int)(4 * scale);
+					Color minKnobColor = (draggingSetting == mms && dragType == 1 || hoveringMin) ? new Color(255, 235, 150) : new Color(255, 215, 0);
+					Color maxKnobColor = (draggingSetting == mms && dragType == 2 || hoveringMax) ? new Color(255, 235, 150) : new Color(255, 215, 0);
+					GlassRenderer.renderRoundedRect(context, barX + minFill - (int)(3 * scale), barY - (int)(1 * scale), knobSize, barH + (int)(2 * scale), minKnobColor, (int) (3 * scale));
+					GlassRenderer.renderRoundedRect(context, barX + maxFill - (int)(3 * scale), barY - (int)(1 * scale), knobSize, barH + (int)(2 * scale), maxKnobColor, (int) (3 * scale));
 				} else if (setting instanceof ModeSetting<?> ms) {
 					TextRenderer.drawString(settingName, context, x + indent + (int) (8 * scale), textY, TEXT_DIM.getRGB());
 					String val = ms.getMode().toString();
@@ -650,6 +668,18 @@ public final class ClickGui extends Screen {
 					if (mouseX >= btnX + indent && mouseX <= btnX + btnW - indent
 							&& mouseY >= currentY && mouseY <= currentY + settingRowH
 							&& mouseY >= contentY && mouseY <= contentY + contentH) {
+						int barX = btnX + indent + (int) (8 * scale);
+						int barW = btnW - indent * 2 - (int) (16 * scale);
+						int barY = currentY + settingRowH - (int) (SLIDER_BAR_HEIGHT * scale) - (int) (2 * scale);
+						int hitTop = barY - (int) (SLIDER_HIT_HEIGHT * scale / 2);
+						int hitBot = barY + (int) (SLIDER_BAR_HEIGHT * scale) + (int) (SLIDER_HIT_HEIGHT * scale / 2);
+						if ((setting instanceof NumberSetting || setting instanceof MinMaxSetting)
+								&& mouseX >= barX && mouseX <= barX + barW
+								&& mouseY >= hitTop && mouseY <= hitBot) {
+							startSliderDrag(setting, mouseX, barX, barW);
+							updateSliderDrag(mouseX);
+							return;
+						}
 						handleSettingClick(setting, button);
 						return;
 					}
@@ -691,12 +721,53 @@ public final class ClickGui extends Screen {
 
 	@Override
 	public boolean mouseDragged(Click click, double deltaX, double deltaY) {
+		if (draggingSetting != null) {
+			float scaleFactor = (float) mc.getWindow().getScaleFactor();
+			int pX = (int) (click.x() * scaleFactor);
+			updateSliderDrag(pX);
+			return true;
+		}
 		return super.mouseDragged(click, deltaX, deltaY);
 	}
 
 	@Override
 	public boolean mouseReleased(Click click) {
+		if (draggingSetting != null) {
+			draggingSetting = null;
+			return true;
+		}
 		return super.mouseReleased(click);
+	}
+
+	private void startSliderDrag(Setting<?> setting, int mouseX, int barX, int barW) {
+		this.dragBarX = barX;
+		this.dragBarW = barW;
+		this.draggingSetting = setting;
+		if (setting instanceof MinMaxSetting mms) {
+			double range = mms.getMax() - mms.getMin();
+			int minPos = barX + (int) (barW * ((mms.getMinValue() - mms.getMin()) / range));
+			int maxPos = barX + (int) (barW * ((mms.getMaxValue() - mms.getMin()) / range));
+			this.dragType = (Math.abs(mouseX - minPos) <= Math.abs(mouseX - maxPos)) ? 1 : 2;
+		} else {
+			this.dragType = 0;
+		}
+	}
+
+	private void updateSliderDrag(int mouseX) {
+		if (draggingSetting == null) return;
+		double ratio = Math.max(0, Math.min(1, (double) (mouseX - dragBarX) / dragBarW));
+		if (draggingSetting instanceof NumberSetting ns) {
+			ns.setValue(ns.getMin() + ratio * (ns.getMax() - ns.getMin()));
+		} else if (draggingSetting instanceof MinMaxSetting mms) {
+			double newVal = mms.getMin() + ratio * (mms.getMax() - mms.getMin());
+			if (dragType == 1) {
+				if (newVal > mms.getMaxValue()) newVal = mms.getMaxValue();
+				mms.setMinValue(newVal);
+			} else {
+				if (newVal < mms.getMinValue()) newVal = mms.getMinValue();
+				mms.setMaxValue(newVal);
+			}
+		}
 	}
 
 	@Override
