@@ -40,7 +40,7 @@ public final class AnchorMacro extends Module implements TickListener, ItemUseLi
 	private final Set<BlockPos> ownedAnchors = new HashSet<>();
 
 	public AnchorMacro() {
-		super(EncryptedString.of("Anchor Macro"),
+		super(EncryptedString.of("Single Anchor"),
 				EncryptedString.of("Automatically blows up respawn anchors for you"),
 				-1,
 				Category.CRYSTAL);
