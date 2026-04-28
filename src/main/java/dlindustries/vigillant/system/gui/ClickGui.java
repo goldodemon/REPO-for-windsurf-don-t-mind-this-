@@ -687,7 +687,8 @@ public final class ClickGui extends Screen {
 						int barY = currentY + settingRowH - (int) (SLIDER_BAR_HEIGHT * scale) - (int) (2 * scale);
 						int hitTop = barY - (int) (SLIDER_HIT_HEIGHT * scale / 2);
 						int hitBot = barY + (int) (SLIDER_BAR_HEIGHT * scale) + (int) (SLIDER_HIT_HEIGHT * scale / 2);
-						if ((setting instanceof NumberSetting || setting instanceof MinMaxSetting)
+						if (button == 0
+								&& (setting instanceof NumberSetting || setting instanceof MinMaxSetting)
 								&& mouseX >= barX && mouseX <= barX + barW
 								&& mouseY >= hitTop && mouseY <= hitBot) {
 							startSliderDrag(setting, mouseX, barX, barW);
@@ -805,6 +806,10 @@ public final class ClickGui extends Screen {
 		mc.setScreenAndRender(system.INSTANCE.previousScreen);
 		currentColor = null;
 		expandedModule = null;
+		draggingSetting = null;
+		dragBarX = 0;
+		dragBarW = 0;
+		dragType = 0;
 		if (searchField != null) {
 			searchField.setText("");
 			searchField.setFocused(false);
