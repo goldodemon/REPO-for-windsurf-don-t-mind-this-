@@ -456,18 +456,19 @@ public final class ClickGui extends Screen {
 					TextRenderer.drawString(val, context, x + w - indent - valW - (int) (8 * scale), textY, TEXT_WHITE.getRGB());
 
 					int barX = x + indent + (int) (8 * scale);
-					int barY = y + settingRowH - (int) (SLIDER_BAR_HEIGHT * scale) - (int) (2 * scale);
 					int barW = w - indent * 2 - (int) (16 * scale);
-					int barH = (int) (SLIDER_BAR_HEIGHT * scale);
-					GlassRenderer.renderRoundedRect(context, barX, barY, barW, barH, new Color(255, 255, 255, 20), (int) (2 * scale));
-					double progress = (ns.getValue() - ns.getMin()) / (ns.getMax() - ns.getMin());
-					int filledW = Math.max((int) (4 * scale), (int) (barW * progress));
-					GlassRenderer.renderRoundedRect(context, barX, barY, filledW, barH, GlassRenderer.getGoldWithAlpha(180), (int) (2 * scale));
-					int knobX = barX + filledW - (int) (3 * scale);
-					int knobSize = (int) (6 * scale);
+					int barH = Math.max(2, (int) (SLIDER_BAR_HEIGHT * scale));
+					int barY = y + settingRowH - barH - (int) (2 * scale);
+					context.fill(barX, barY, barX + barW, barY + barH, new Color(255, 255, 255, 20).getRGB());
+					double denom = ns.getMax() - ns.getMin();
+					double progress = denom > 0 ? (ns.getValue() - ns.getMin()) / denom : 0;
+					int filledW = Math.max(2, (int) (barW * progress));
+					context.fill(barX, barY, barX + filledW, barY + barH, GlassRenderer.getGoldWithAlpha(180).getRGB());
+					int knobW = Math.max(4, (int) (6 * scale));
+					int knobX = barX + filledW - knobW / 2;
 					boolean hovering = mouseX >= barX && mouseX <= barX + barW && mouseY >= barY - (int)(4 * scale) && mouseY <= barY + barH + (int)(4 * scale);
-					Color knobColor = (draggingSetting == ns || hovering) ? new Color(255, 235, 150) : new Color(255, 215, 0);
-					GlassRenderer.renderRoundedRect(context, knobX, barY - (int)(1 * scale), knobSize, barH + (int)(2 * scale), knobColor, (int) (3 * scale));
+					int knobColor = (draggingSetting == ns || hovering) ? new Color(255, 235, 150).getRGB() : GOLD.getRGB();
+					context.fill(knobX, barY - 1, knobX + knobW, barY + barH + 1, knobColor);
 				} else if (setting instanceof MinMaxSetting mms) {
 					TextRenderer.drawString(settingName, context, x + indent + (int) (8 * scale), textY, TEXT_DIM.getRGB());
 					String val = String.format("%.0f - %.0f", mms.getMinValue(), mms.getMaxValue());
@@ -475,21 +476,26 @@ public final class ClickGui extends Screen {
 					TextRenderer.drawString(val, context, x + w - indent - valW - (int) (8 * scale), textY, TEXT_WHITE.getRGB());
 
 					int barX = x + indent + (int) (8 * scale);
-					int barY = y + settingRowH - (int) (SLIDER_BAR_HEIGHT * scale) - (int) (2 * scale);
 					int barW = w - indent * 2 - (int) (16 * scale);
-					int barH = (int) (SLIDER_BAR_HEIGHT * scale);
-					GlassRenderer.renderRoundedRect(context, barX, barY, barW, barH, new Color(255, 255, 255, 20), (int) (2 * scale));
+					int barH = Math.max(2, (int) (SLIDER_BAR_HEIGHT * scale));
+					int barY = y + settingRowH - barH - (int) (2 * scale);
+					context.fill(barX, barY, barX + barW, barY + barH, new Color(255, 255, 255, 20).getRGB());
 					double range = mms.getMax() - mms.getMin();
-					int minFill = (int) (barW * ((mms.getMinValue() - mms.getMin()) / range));
-					int maxFill = (int) (barW * ((mms.getMaxValue() - mms.getMin()) / range));
-					GlassRenderer.renderRoundedRect(context, barX + minFill, barY, maxFill - minFill, barH, GlassRenderer.getGoldWithAlpha(180), (int) (2 * scale));
-					int knobSize = (int) (6 * scale);
-					boolean hoveringMin = mouseX >= barX + minFill - (int)(6 * scale) && mouseX <= barX + minFill + (int)(6 * scale) && mouseY >= barY - (int)(4 * scale) && mouseY <= barY + barH + (int)(4 * scale);
-					boolean hoveringMax = mouseX >= barX + maxFill - (int)(6 * scale) && mouseX <= barX + maxFill + (int)(6 * scale) && mouseY >= barY - (int)(4 * scale) && mouseY <= barY + barH + (int)(4 * scale);
-					Color minKnobColor = (draggingSetting == mms && dragType == 1 || hoveringMin) ? new Color(255, 235, 150) : new Color(255, 215, 0);
-					Color maxKnobColor = (draggingSetting == mms && dragType == 2 || hoveringMax) ? new Color(255, 235, 150) : new Color(255, 215, 0);
-					GlassRenderer.renderRoundedRect(context, barX + minFill - (int)(3 * scale), barY - (int)(1 * scale), knobSize, barH + (int)(2 * scale), minKnobColor, (int) (3 * scale));
-					GlassRenderer.renderRoundedRect(context, barX + maxFill - (int)(3 * scale), barY - (int)(1 * scale), knobSize, barH + (int)(2 * scale), maxKnobColor, (int) (3 * scale));
+					if (range > 0) {
+						int minFill = (int) (barW * ((mms.getMinValue() - mms.getMin()) / range));
+						int maxFill = (int) (barW * ((mms.getMaxValue() - mms.getMin()) / range));
+						int fillW = Math.max(0, maxFill - minFill);
+						if (fillW > 0) {
+							context.fill(barX + minFill, barY, barX + maxFill, barY + barH, GlassRenderer.getGoldWithAlpha(180).getRGB());
+						}
+						int knobW = Math.max(4, (int) (6 * scale));
+						boolean hoveringMin = mouseX >= barX + minFill - (int)(6 * scale) && mouseX <= barX + minFill + (int)(6 * scale) && mouseY >= barY - (int)(4 * scale) && mouseY <= barY + barH + (int)(4 * scale);
+						boolean hoveringMax = mouseX >= barX + maxFill - (int)(6 * scale) && mouseX <= barX + maxFill + (int)(6 * scale) && mouseY >= barY - (int)(4 * scale) && mouseY <= barY + barH + (int)(4 * scale);
+						int minKnobColor = (draggingSetting == mms && dragType == 1 || hoveringMin) ? new Color(255, 235, 150).getRGB() : GOLD.getRGB();
+						int maxKnobColor = (draggingSetting == mms && dragType == 2 || hoveringMax) ? new Color(255, 235, 150).getRGB() : GOLD.getRGB();
+						context.fill(barX + minFill - knobW / 2, barY - 1, barX + minFill + knobW / 2, barY + barH + 1, minKnobColor);
+						context.fill(barX + maxFill - knobW / 2, barY - 1, barX + maxFill + knobW / 2, barY + barH + 1, maxKnobColor);
+					}
 				} else if (setting instanceof ModeSetting<?> ms) {
 					TextRenderer.drawString(settingName, context, x + indent + (int) (8 * scale), textY, TEXT_DIM.getRGB());
 					String val = ms.getMode().toString();
