@@ -10,7 +10,8 @@ public enum Category {
 	optimizer(EncryptedString.of("Utilities")),
 	RENDER(EncryptedString.of("Render")),
 	ESP(EncryptedString.of("Esp and Visuals")),
-	CLIENT(EncryptedString.of("Client"));
+	CLIENT(EncryptedString.of("Client")),
+	BLATANT(EncryptedString.of("Blatant"));
 	public final CharSequence name;
 
 	Category(CharSequence name) {
