@@ -7,6 +7,7 @@ import dlindustries.vigillant.system.module.Module;
 import dlindustries.vigillant.system.module.modules.client.ClickGUI;
 import dlindustries.vigillant.system.module.setting.*;
 import dlindustries.vigillant.system.utils.TextRenderer;
+import dlindustries.vigillant.system.utils.VulkanCompat;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.TextFieldWidget;
@@ -149,7 +150,7 @@ public final class ClickGui extends Screen {
 		float dt = Math.min((now - lastRenderTime) / 1000.0f, 0.05f);
 		lastRenderTime = now;
 
-		if (ClickGUI.blur.getValue()) {
+		if (ClickGUI.blur.getValue() && !VulkanCompat.isVulkanLoaded()) {
 			mc.gameRenderer.renderBlur();
 		}
 

@@ -72,16 +72,22 @@ public final class ComboOptimizer extends Module implements TickListener, Attack
 	public void onDisable() {
 		eventManager.remove(TickListener.class, this);
 		eventManager.remove(AttackListener.class, this);
-		if (tapping && doingSTap) {
-			mc.options.backKey.setPressed(false);
+		if (mc.options != null) {
+			if (tapping && doingSTap) {
+				mc.options.backKey.setPressed(false);
+			}
+			// Always restore forward key in case disable happened mid W-tap.
+			mc.options.forwardKey.setPressed(false);
 		}
 		tapping = false;
+		doingSTap = false;
+		releaseTicks = 0;
 		super.onDisable();
 	}
 
 	@Override
 	public void onAttack(AttackEvent event) {
-		if (mc.player == null) return;
+		if (mc.player == null || mc.options == null) return;
 		if (tapping) return;
 
 		if (!(mc.crosshairTarget instanceof EntityHitResult ehr)) return;
@@ -131,7 +137,7 @@ public final class ComboOptimizer extends Module implements TickListener, Attack
 
 	@Override
 	public void onTick() {
-		if (mc.player == null || mc.currentScreen != null) return;
+		if (mc.player == null || mc.currentScreen != null || mc.options == null) return;
 
 		if (tapping) {
 			if (doingSTap) {
@@ -144,6 +150,8 @@ public final class ComboOptimizer extends Module implements TickListener, Attack
 				tapping = false;
 				if (doingSTap) {
 					mc.options.backKey.setPressed(false);
+				} else {
+					mc.options.forwardKey.setPressed(false);
 				}
 			}
 		}

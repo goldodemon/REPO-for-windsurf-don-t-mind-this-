@@ -4,6 +4,7 @@ import com.mojang.blaze3d.opengl.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import dlindustries.vigillant.system.module.modules.client.ClickGUI;
+import dlindustries.vigillant.system.utils.VulkanCompat;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
@@ -337,7 +338,8 @@ public final class RenderUtils {
 	public static void renderLine(MatrixStack matrices, Color color, Vec3d start, Vec3d end) {
 		matrices.push();
 		Matrix4f s = matrices.peek().getPositionMatrix();
-		if (ClickGUI.antiAliasing.getValue()) {
+		boolean useMsaa = ClickGUI.antiAliasing.getValue() && !VulkanCompat.isVulkanLoaded();
+		if (useMsaa) {
 			GL11.glEnable(GL13.GL_MULTISAMPLE);
 			GL11.glEnable(GL11.GL_LINE_SMOOTH);
 			GL11.glHint(GL11.GL_LINE_SMOOTH_HINT, GL11.GL_NICEST);
@@ -361,7 +363,7 @@ public final class RenderUtils {
 
 		GL11.glDepthFunc(GL11.GL_LEQUAL);
 		GlStateManager._disableBlend();
-		if (ClickGUI.antiAliasing.getValue()) {
+		if (useMsaa) {
 			GL11.glDisable(GL11.GL_LINE_SMOOTH);
 			GL11.glDisable(GL13.GL_MULTISAMPLE);
 		}
