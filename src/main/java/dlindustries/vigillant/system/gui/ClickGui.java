@@ -36,7 +36,9 @@ public final class ClickGui extends Screen {
 	private static final int MODULE_PADDING = 3;
 	private static final int CORNER_RADIUS = 12;
 	private static final int SCROLL_SPEED = 20;
-	private static final int SETTING_ROW_HEIGHT = 22;
+	private static final int SETTING_ROW_HEIGHT = 24;
+	private static final int SLIDER_BAR_HEIGHT = 6;
+	private static final int SLIDER_HIT_HEIGHT = 14;
 
 	private static final Color GOLD = new Color(255, 215, 0);
 	private static final Color TEXT_WHITE = new Color(230, 230, 230);
@@ -56,6 +58,10 @@ public final class ClickGui extends Screen {
 	private long lastRenderTime;
 	private TextFieldWidget searchField;
 	private Module expandedModule;
+
+	private Setting<?> draggingSetting;
+	private int dragBarX, dragBarW;
+	private int dragType; // 0 = single/number, 1 = minmax-min, 2 = minmax-max
 
 	public Color currentColor;
 	public List<Window> windows = new ArrayList<>();
@@ -411,7 +417,11 @@ public final class ClickGui extends Screen {
 			currentY += moduleBtnH + modulePad;
 
 			if (entry.module == expandedModule) {
-				currentY = renderSettingsPanel(context, entry.module, btnX, currentY, btnW, scale, mouseX, mouseY, contentY, contentH);
+				try {
+					currentY = renderSettingsPanel(context, entry.module, btnX, currentY, btnW, scale, mouseX, mouseY, contentY, contentH);
+				} catch (Exception e) {
+					currentY += (int) (4 * scale);
+				}
 			}
 		}
 
@@ -420,22 +430,25 @@ public final class ClickGui extends Screen {
 
 	private int renderSettingsPanel(DrawContext context, Module module, int x, int startY, int w, float scale, int mouseX, int mouseY, int clipY, int clipH) {
 		List<Setting<?>> settings = module.getSettings();
+		if (settings == null) return startY;
 		int settingRowH = (int) (SETTING_ROW_HEIGHT * scale);
 		int y = startY;
 		int indent = (int) (10 * scale);
 
 		for (Setting<?> setting : settings) {
+			if (setting == null) continue;
 			if (setting instanceof KeybindSetting kb && kb.isModuleKey()) continue;
 
 			boolean visible = y + settingRowH >= clipY && y <= clipY + clipH;
 
 			if (visible) {
+			  try {
 				context.fill(x + indent, y, x + w - indent, y + settingRowH,
 						new Color(255, 255, 255, 5).getRGB());
 				context.fill(x + indent, y + settingRowH - 1, x + w - indent, y + settingRowH,
 						new Color(255, 255, 255, 8).getRGB());
 
-				String settingName = setting.getName().toString();
+				String settingName = setting.getName() != null ? setting.getName().toString() : "?";
 				int textY = y + (settingRowH - mc.textRenderer.fontHeight * 2) / 2;
 
 				if (setting instanceof BooleanSetting bs) {
@@ -451,13 +464,19 @@ public final class ClickGui extends Screen {
 					TextRenderer.drawString(val, context, x + w - indent - valW - (int) (8 * scale), textY, TEXT_WHITE.getRGB());
 
 					int barX = x + indent + (int) (8 * scale);
-					int barY = y + settingRowH - (int) (4 * scale);
 					int barW = w - indent * 2 - (int) (16 * scale);
-					int barH = (int) (2 * scale);
+					int barH = Math.max(2, (int) (SLIDER_BAR_HEIGHT * scale));
+					int barY = y + settingRowH - barH - (int) (2 * scale);
 					context.fill(barX, barY, barX + barW, barY + barH, new Color(255, 255, 255, 20).getRGB());
-					double progress = (ns.getValue() - ns.getMin()) / (ns.getMax() - ns.getMin());
-					int filledW = (int) (barW * progress);
+					double denom = ns.getMax() - ns.getMin();
+					double progress = denom > 0 ? (ns.getValue() - ns.getMin()) / denom : 0;
+					int filledW = Math.max(2, (int) (barW * progress));
 					context.fill(barX, barY, barX + filledW, barY + barH, GlassRenderer.getGoldWithAlpha(180).getRGB());
+					int knobW = Math.max(4, (int) (6 * scale));
+					int knobX = barX + filledW - knobW / 2;
+					boolean hovering = mouseX >= barX && mouseX <= barX + barW && mouseY >= barY - (int)(4 * scale) && mouseY <= barY + barH + (int)(4 * scale);
+					int knobColor = (draggingSetting == ns || hovering) ? new Color(255, 235, 150).getRGB() : GOLD.getRGB();
+					context.fill(knobX, barY - 1, knobX + knobW, barY + barH + 1, knobColor);
 				} else if (setting instanceof MinMaxSetting mms) {
 					TextRenderer.drawString(settingName, context, x + indent + (int) (8 * scale), textY, TEXT_DIM.getRGB());
 					String val = String.format("%.0f - %.0f", mms.getMinValue(), mms.getMaxValue());
@@ -465,14 +484,26 @@ public final class ClickGui extends Screen {
 					TextRenderer.drawString(val, context, x + w - indent - valW - (int) (8 * scale), textY, TEXT_WHITE.getRGB());
 
 					int barX = x + indent + (int) (8 * scale);
-					int barY = y + settingRowH - (int) (4 * scale);
 					int barW = w - indent * 2 - (int) (16 * scale);
-					int barH = (int) (2 * scale);
+					int barH = Math.max(2, (int) (SLIDER_BAR_HEIGHT * scale));
+					int barY = y + settingRowH - barH - (int) (2 * scale);
 					context.fill(barX, barY, barX + barW, barY + barH, new Color(255, 255, 255, 20).getRGB());
 					double range = mms.getMax() - mms.getMin();
-					int minFill = (int) (barW * ((mms.getMinValue() - mms.getMin()) / range));
-					int maxFill = (int) (barW * ((mms.getMaxValue() - mms.getMin()) / range));
-					context.fill(barX + minFill, barY, barX + maxFill, barY + barH, GlassRenderer.getGoldWithAlpha(180).getRGB());
+					if (range > 0) {
+						int minFill = (int) (barW * ((mms.getMinValue() - mms.getMin()) / range));
+						int maxFill = (int) (barW * ((mms.getMaxValue() - mms.getMin()) / range));
+						int fillW = Math.max(0, maxFill - minFill);
+						if (fillW > 0) {
+							context.fill(barX + minFill, barY, barX + maxFill, barY + barH, GlassRenderer.getGoldWithAlpha(180).getRGB());
+						}
+						int knobW = Math.max(4, (int) (6 * scale));
+						boolean hoveringMin = mouseX >= barX + minFill - (int)(6 * scale) && mouseX <= barX + minFill + (int)(6 * scale) && mouseY >= barY - (int)(4 * scale) && mouseY <= barY + barH + (int)(4 * scale);
+						boolean hoveringMax = mouseX >= barX + maxFill - (int)(6 * scale) && mouseX <= barX + maxFill + (int)(6 * scale) && mouseY >= barY - (int)(4 * scale) && mouseY <= barY + barH + (int)(4 * scale);
+						int minKnobColor = (draggingSetting == mms && dragType == 1 || hoveringMin) ? new Color(255, 235, 150).getRGB() : GOLD.getRGB();
+						int maxKnobColor = (draggingSetting == mms && dragType == 2 || hoveringMax) ? new Color(255, 235, 150).getRGB() : GOLD.getRGB();
+						context.fill(barX + minFill - knobW / 2, barY - 1, barX + minFill + knobW / 2, barY + barH + 1, minKnobColor);
+						context.fill(barX + maxFill - knobW / 2, barY - 1, barX + maxFill + knobW / 2, barY + barH + 1, maxKnobColor);
+					}
 				} else if (setting instanceof ModeSetting<?> ms) {
 					TextRenderer.drawString(settingName, context, x + indent + (int) (8 * scale), textY, TEXT_DIM.getRGB());
 					String val = ms.getMode().toString();
@@ -481,6 +512,7 @@ public final class ClickGui extends Screen {
 				} else {
 					TextRenderer.drawString(settingName, context, x + indent + (int) (8 * scale), textY, TEXT_DIM.getRGB());
 				}
+			  } catch (Exception ignored) {}
 			}
 
 			y += settingRowH;
@@ -651,6 +683,19 @@ public final class ClickGui extends Screen {
 					if (mouseX >= btnX + indent && mouseX <= btnX + btnW - indent
 							&& mouseY >= currentY && mouseY <= currentY + settingRowH
 							&& mouseY >= contentY && mouseY <= contentY + contentH) {
+						int barX = btnX + indent + (int) (8 * scale);
+						int barW = btnW - indent * 2 - (int) (16 * scale);
+						int barY = currentY + settingRowH - (int) (SLIDER_BAR_HEIGHT * scale) - (int) (2 * scale);
+						int hitTop = barY - (int) (SLIDER_HIT_HEIGHT * scale / 2);
+						int hitBot = barY + (int) (SLIDER_BAR_HEIGHT * scale) + (int) (SLIDER_HIT_HEIGHT * scale / 2);
+						if (button == 0
+								&& (setting instanceof NumberSetting || setting instanceof MinMaxSetting)
+								&& mouseX >= barX && mouseX <= barX + barW
+								&& mouseY >= hitTop && mouseY <= hitBot) {
+							startSliderDrag(setting, mouseX, barX, barW);
+							updateSliderDrag(mouseX);
+							return;
+						}
 						handleSettingClick(setting, button);
 						return;
 					}
@@ -662,25 +707,27 @@ public final class ClickGui extends Screen {
 	}
 
 	private void handleSettingClick(Setting<?> setting, int button) {
-		if (setting instanceof BooleanSetting bs) {
-			bs.toggle();
-		} else if (setting instanceof MinMaxSetting mms) {
-			double increment = mms.getIncrement();
-			if (button == 0) {
-				mms.setMaxValue(mms.getMaxValue() + increment);
-			} else if (button == 1) {
-				mms.setMinValue(mms.getMinValue() + increment);
+		try {
+			if (setting instanceof BooleanSetting bs) {
+				bs.toggle();
+			} else if (setting instanceof MinMaxSetting mms) {
+				double increment = mms.getIncrement();
+				if (button == 0) {
+					mms.setMaxValue(mms.getMaxValue() + increment);
+				} else if (button == 1) {
+					mms.setMinValue(mms.getMinValue() + increment);
+				}
+			} else if (setting instanceof NumberSetting ns) {
+				double increment = ns.getIncrement();
+				if (button == 0) {
+					ns.setValue(ns.getValue() + increment);
+				} else if (button == 1) {
+					ns.setValue(ns.getValue() - increment);
+				}
+			} else if (setting instanceof ModeSetting<?> ms) {
+				ms.cycle();
 			}
-		} else if (setting instanceof NumberSetting ns) {
-			double increment = ns.getIncrement();
-			if (button == 0) {
-				ns.setValue(ns.getValue() + increment);
-			} else if (button == 1) {
-				ns.setValue(ns.getValue() - increment);
-			}
-		} else if (setting instanceof ModeSetting<?> ms) {
-			ms.cycle();
-		}
+		} catch (Exception ignored) {}
 	}
 
 	@Override
@@ -692,12 +739,53 @@ public final class ClickGui extends Screen {
 
 	@Override
 	public boolean mouseDragged(Click click, double deltaX, double deltaY) {
+		if (draggingSetting != null) {
+			float scaleFactor = (float) mc.getWindow().getScaleFactor();
+			int pX = (int) (click.x() * scaleFactor);
+			updateSliderDrag(pX);
+			return true;
+		}
 		return super.mouseDragged(click, deltaX, deltaY);
 	}
 
 	@Override
 	public boolean mouseReleased(Click click) {
+		if (draggingSetting != null) {
+			draggingSetting = null;
+			return true;
+		}
 		return super.mouseReleased(click);
+	}
+
+	private void startSliderDrag(Setting<?> setting, int mouseX, int barX, int barW) {
+		this.dragBarX = barX;
+		this.dragBarW = barW;
+		this.draggingSetting = setting;
+		if (setting instanceof MinMaxSetting mms) {
+			double range = mms.getMax() - mms.getMin();
+			int minPos = barX + (int) (barW * ((mms.getMinValue() - mms.getMin()) / range));
+			int maxPos = barX + (int) (barW * ((mms.getMaxValue() - mms.getMin()) / range));
+			this.dragType = (Math.abs(mouseX - minPos) <= Math.abs(mouseX - maxPos)) ? 1 : 2;
+		} else {
+			this.dragType = 0;
+		}
+	}
+
+	private void updateSliderDrag(int mouseX) {
+		if (draggingSetting == null) return;
+		double ratio = Math.max(0, Math.min(1, (double) (mouseX - dragBarX) / dragBarW));
+		if (draggingSetting instanceof NumberSetting ns) {
+			ns.setValue(ns.getMin() + ratio * (ns.getMax() - ns.getMin()));
+		} else if (draggingSetting instanceof MinMaxSetting mms) {
+			double newVal = mms.getMin() + ratio * (mms.getMax() - mms.getMin());
+			if (dragType == 1) {
+				if (newVal > mms.getMaxValue()) newVal = mms.getMaxValue();
+				mms.setMinValue(newVal);
+			} else {
+				if (newVal < mms.getMinValue()) newVal = mms.getMinValue();
+				mms.setMaxValue(newVal);
+			}
+		}
 	}
 
 	@Override
@@ -719,6 +807,10 @@ public final class ClickGui extends Screen {
 		mc.setScreenAndRender(system.INSTANCE.previousScreen);
 		currentColor = null;
 		expandedModule = null;
+		draggingSetting = null;
+		dragBarX = 0;
+		dragBarW = 0;
+		dragType = 0;
 		if (searchField != null) {
 			searchField.setText("");
 			searchField.setFocused(false);
